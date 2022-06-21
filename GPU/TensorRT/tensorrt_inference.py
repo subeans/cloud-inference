@@ -128,7 +128,7 @@ def trt_predict_benchmark(trt_compiled_model_dir,precision, batchsize, display_e
     results.loc['latency_min']             = [np.min(iter_times) * 1000]
     results.loc['first_batch']             = [iter_times[0]*1000]
     results.loc['next_batches_mean']       = [np.mean(iter_times[1:])*1000]
-    print(results)
+    # print(results)
    
     return results, iter_times
 
@@ -139,16 +139,28 @@ if __name__ == "__main__":
     results = None
     parser = argparse.ArgumentParser()
     parser.add_argument('--model',default='resnet50' , type=str)
-    parser.add_argument('--batchsize',default=1,type=int)
+    parser.add_argument('--batch_list',default=[1,8,16,32,64,128,256,512], type=list)
     parser.add_argument('--engine_batch',default=8,type=int)
     parser.add_argument('--precision',default='FP32',type=str)
     args = parser.parse_args()
     model = args.model
-    batchsize = args.batchsize
+    # batchsize = args.batchsize
+    batch_list = args.batch_list
     engine_batch = args.engine_batch
     precision = args.precision
 
     trt_compiled_model_dir = f'{model}_{precision}_{engine_batch}'
 
-    print("------TENSORRT_INFERENCE-------")
-    trt_predict_benchmark(trt_compiled_model_dir,precision, batchsize)
+    results = pd.DataFrame()
+    for batch_size in batch_list:
+        opt = {'batch_size': batch_size}
+        iter_ds = pd.DataFrame()
+
+        print(f"------TENSORRT_INFERENCE : {model} {batch_size}-------")
+        res,iter_times = trt_predict_benchmark(trt_compiled_model_dir,precision, batch_size)
+        col_name = lambda opt: f'{model}_{batch_size}'
+        
+        iter_ds = pd.concat([iter_ds, pd.DataFrame(iter_times, columns=[col_name(opt)])], axis=1)
+        results = pd.concat([results, res], axis=1)
+        print(results)
+    results.to_csv(f'{model}_{engine_batch}.csv')
