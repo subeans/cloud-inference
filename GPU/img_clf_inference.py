@@ -16,6 +16,7 @@ import argparse
 models = {
     'xception':xception,
     'vgg16':vgg16,
+    'resnet50':resnet50,
     'inception_v3':inception_v3,
     'mobilenet_v2':mobilenet_v2,
 }
