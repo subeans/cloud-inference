@@ -10,7 +10,6 @@ from tensorflow.keras.applications import (
     inception_v3,
     mobilenet_v2
 )
-from tensorflow.keras.models import load_model, save_model
 
 
 models_detail = {
