@@ -60,26 +60,26 @@ def val_preprocessing(record):
     
     return image, label, label_text
 
-def get_dataset(batch_size):
+def get_dataset(batchsize):
     data_dir = '/workspace/datasets/*'
     files = tf.io.gfile.glob(os.path.join(data_dir))
     dataset = tf.data.TFRecordDataset(files)
     
     dataset = dataset.map(map_func=val_preprocessing, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    dataset = dataset.batch(batch_size=batch_size)
+    dataset = dataset.batch(batch_size=batchsize)
     dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
     dataset = dataset.repeat(count=1)
     
     return dataset
 
 
-def trt_predict_benchmark(trt_compiled_model_dir,precision, batcsize, display_every=5000, warm_up=50):
+def trt_predict_benchmark(trt_compiled_model_dir,precision, batchsize, display_every=5000, warm_up=50):
 
     print('\n============================================================')
-    print(f'{trt_compiled_model_dir} - inference batch size: {batcsize}')
+    print(f'{trt_compiled_model_dir} - inference batch size: {batchsize}')
     print('=============================================================\n')
     
-    dataset = get_dataset(batcsize)
+    dataset = get_dataset(batchsize)
     
     #compile한 model engine load 
     saved_model_trt = tf.saved_model.load(trt_compiled_model_dir, tags=[tag_constants.SERVING])
@@ -105,29 +105,29 @@ def trt_predict_benchmark(trt_compiled_model_dir,precision, batcsize, display_ev
         
         actual_labels.extend(label for label_list in batch_labels.numpy() for label in label_list)
         pred_labels.extend(list(tf.argmax(trt_results['predictions'], axis=1).numpy()))
-        if (i)*batcsize >= display_threshold:
-            print(f'Images {(i)*batcsize}/50000. Average i/s {np.mean(batcsize/np.array(iter_times[-display_every:]))}')
+        if (i)*batchsize >= display_threshold:
+            print(f'Images {(i)*batchsize}/50000. Average i/s {np.mean(batchsize/np.array(iter_times[-display_every:]))}')
             display_threshold+=display_every
     
-    print('Throughput: {:.0f} images/s'.format(N * batcsize / sum(iter_times)))
+    print('Throughput: {:.0f} images/s'.format(N * batchsize / sum(iter_times)))
 
     acc_trt = np.sum(np.array(actual_labels) == np.array(pred_labels))/len(actual_labels)
     iter_times = np.array(iter_times)
    
-    results = pd.DataFrame(columns = [f'trt_{precision}_{batcsize}'])
+    results = pd.DataFrame(columns = [f'trt_{precision}_{batchsize}'])
     results.loc['instance_type']           = [requests.get('http://169.254.169.254/latest/meta-data/instance-type').text]
-    results.loc['batchsize']               = [batcsize]
+    results.loc['batchsize']               = [batchsize]
     results.loc['accuracy']                = [acc_trt]
     results.loc['prediction_time']         = [np.sum(iter_times)]
     results.loc['wall_time']               = [time.time() - walltime_start]   
-    results.loc['images_per_sec_mean']     = [np.mean(batcsize / iter_times)]
-    results.loc['images_per_sec_std']      = [np.std(batcsize / iter_times, ddof=1)]
+    results.loc['images_per_sec_mean']     = [np.mean(batchsize / iter_times)]
+    results.loc['images_per_sec_std']      = [np.std(batchsize / iter_times, ddof=1)]
     results.loc['latency_mean']            = [np.mean(iter_times) * 1000]
     results.loc['latency_99th_percentile'] = [np.percentile(iter_times, q=99, interpolation="lower") * 1000]
     results.loc['latency_median']          = [np.median(iter_times) * 1000]
     results.loc['latency_min']             = [np.min(iter_times) * 1000]
-    results.loc['first_batch']             = [iter_times[0]]
-    results.loc['next_batches_mean']       = [np.mean(iter_times[1:])]
+    results.loc['first_batch']             = [iter_times[0]*1000]
+    results.loc['next_batches_mean']       = [np.mean(iter_times[1:])*1000]
     print(results)
    
     return results, iter_times
