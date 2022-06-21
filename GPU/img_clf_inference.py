@@ -162,4 +162,4 @@ if __name__ == "__main__":
         iter_ds = pd.concat([iter_ds, pd.DataFrame(iter_times, columns=[col_name(opt)])], axis=1)
         results = pd.concat([results, res], axis=1)
         print(results)
-        results.to_csv(f'{model}.csv')
+    results.to_csv(f'{model}.csv')
