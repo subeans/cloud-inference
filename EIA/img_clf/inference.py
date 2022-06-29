@@ -18,10 +18,10 @@ import argparse
 print(tf.__version__) 
 
 # # https://github.com/tensorflow/tensorflow/issues/29931
-# temp = tf.zeros([batch_size, img_size, img_size, 3])
-# _ = tf.keras.applications.resnet50.preprocess_input(temp)
+temp = tf.zeros([batch_size, img_size, img_size, 3])
+_ = tf.keras.applications.resnet50.preprocess_input(temp)
 
-ei_client = boto3.client('elastic-inference')
+ei_client = boto3.client('elastic-inference',region_name='us-west-2')
 
 # Dataset processing
 
@@ -62,7 +62,7 @@ def val_preprocessing(record):
     return image, label, label_text
 
 def get_dataset(batch_size, use_cache=False):
-    data_dir = '/home/ubuntu/datasets/*'
+    data_dir = '/home/ec2-user/datasets/*'
     files = tf.io.gfile.glob(os.path.join(data_dir))
     dataset = tf.data.TFRecordDataset(files)
     
@@ -114,7 +114,7 @@ def ei_inference(saved_model_dir, batch_size, accelerator_id):
 
         if i == 0:
             for i in range(warm_up):
-                _ = eia_model.predict(validation_ds)
+                _ = eia_model.predict(model_feed_dict)
 
         start_time = time.time()
         pred_prob = eia_model(model_feed_dict)
