@@ -1,25 +1,19 @@
 import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras.applications.resnet50 import ResNet50
-from tensorflow.keras.preprocessing import image
-from tensorflow.keras.applications.resnet50 import preprocess_input, decode_predictions
 from ei_for_tf.python.predictor.ei_predictor import EIPredictor
 import numpy as np
 import pandas as pd
 import shutil
 import requests
 import time
-import json
 import os
 import boto3
 import argparse
 
-
 print(tf.__version__) 
 
 # # https://github.com/tensorflow/tensorflow/issues/29931
-temp = tf.zeros([batch_size, img_size, img_size, 3])
-_ = tf.keras.applications.resnet50.preprocess_input(temp)
+# temp = tf.zeros([1, 224, 224, 3])
+# _ = tf.keras.applications.resnet50.preprocess_input(temp)
 
 ei_client = boto3.client('elastic-inference',region_name='us-west-2')
 
@@ -110,11 +104,11 @@ def ei_inference(saved_model_dir, batch_size, accelerator_id):
     ipname = list(eia_model.feed_tensors.keys())[0]
     resname = list(eia_model.fetch_tensors.keys())[0]
     for i, (validation_ds, batch_labels, _) in enumerate(dataset):
-        model_feed_dict={'input_1': validation_ds.numpy()}
+        model_feed_dict={f'{ipname}': validation_ds.numpy()}
 
         if i == 0:
-            for i in range(warm_up):
-                _ = eia_model.predict(model_feed_dict)
+            for j in range(warm_up):
+                _ = eia_model(model_feed_dict)
 
         start_time = time.time()
         pred_prob = eia_model(model_feed_dict)
@@ -156,7 +150,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--model',default='resnet50' , type=str )
     parser.add_argument('--imgsize',default=224,type=int)
-    parser.add_argument('--batch_list',default=[1,8,16,32,64,128,256,512], type=list)
+    parser.add_argument('--batch_list',default=[1,2,4,8,16,32,64], type=list)
     parser.add_argument('--eia_acc_id',default=0,type=int) 
     
     model = parser.parse_args().model
@@ -165,6 +159,7 @@ if __name__ == "__main__":
     img_size = parser.parse_args().imgsize
 
     results = pd.DataFrame()
+    ei_size = ei_client.describe_accelerators()['acceleratorSet'][eia_acc_id]['acceleratorType']
 
     col_name = lambda ei_acc_id: f'ei_{ei_client.describe_accelerators()["acceleratorSet"][ei_acc_id]["acceleratorType"]}_batch_size_{batch_size}'
     # ei_options = [{'ei_acc_id': 0}]
@@ -180,4 +175,4 @@ if __name__ == "__main__":
         results = pd.concat([results, res], axis=1)
         print(results)
 
-    results.to_csv(f'{model}_EIA.csv')
+    results.to_csv(f'{model}_EIA_{ei_size}.csv')
