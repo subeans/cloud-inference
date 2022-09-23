@@ -98,7 +98,11 @@ def inference(saved_model_name, batch_size):
                 _ = model.predict(batch)
 
         start_time = time.time()
+        
+        tf.profiler.experimental.start('logdir')
         yhat_np = model.predict(batch)
+        tf.profiler.experimental.stop()
+        
         inference_time = time.time()-start_time
         if counter ==0:
             first_iter_time = inference_time
