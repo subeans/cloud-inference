@@ -8,7 +8,13 @@ import time
 import os
 import boto3
 import argparse
-
+from tensorflow.keras.applications import (
+    xception,
+    vgg16,
+    resnet50,
+    inception_v3,
+    mobilenet_v2,
+)
 print(tf.__version__) 
 
 # # https://github.com/tensorflow/tensorflow/issues/29931
@@ -16,6 +22,14 @@ print(tf.__version__)
 # _ = tf.keras.applications.resnet50.preprocess_input(temp)
 
 ei_client = boto3.client('elastic-inference',region_name='us-west-2')
+
+models = {
+    'xception':xception,
+    'vgg16':vgg16,
+    'resnet50':resnet50,
+    'inception_v3':inception_v3,
+    'mobilenet_v2':mobilenet_v2,
+}
 
 # Dataset processing
 
@@ -49,10 +63,15 @@ def val_preprocessing(record):
     new_width = tf.cast(tf.math.rint(width * scale), tf.int32)
     
     image = tf.image.resize(image, [new_height, new_width], method='bicubic')
-    image = tf.image.resize_with_crop_or_pad(image, 224, 224)
-    
-    image = tf.keras.applications.resnet50.preprocess_input(image)
-    
+    if "inception" in model or "xception" in model:
+        image = tf.image.resize_with_crop_or_pad(image, 299, 299)
+    else:
+        image = tf.image.resize_with_crop_or_pad(image, 224, 224)
+
+    label = tf.cast(label, tf.int32)
+    image = models[model].preprocess_input(image)
+
+
     return image, label, label_text
 
 def get_dataset(batch_size, use_cache=False):
@@ -111,12 +130,10 @@ def ei_inference(saved_model_dir, batch_size, accelerator_id):
                 _ = eia_model(model_feed_dict)
 
         start_time = time.time()
-        
         tf.profiler.experimental.start('logdir')
         pred_prob = eia_model(model_feed_dict)
-        tf.profiler.experimental.stop()
-        
         inf_time = time.time() - start_time
+        tf.profiler.experimental.stop()
 
         if i ==0:
             first_iter_time = inf_time
@@ -154,7 +171,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--model',default='resnet50' , type=str )
     parser.add_argument('--imgsize',default=224,type=int)
-    parser.add_argument('--batch_list',default=[1,2,4,8,16,32,64], type=list)
+#     parser.add_argument('--batch_list',default=[1,2,4,8,16,32,64], type=list)
+    parser.add_argument('--batch_list',default=[1,64], type=list)
     parser.add_argument('--eia_acc_id',default=0,type=int) 
     
     model = parser.parse_args().model
