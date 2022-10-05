@@ -124,12 +124,13 @@ def inference(saved_model_name, batch_size):
         results = pd.DataFrame(columns = [f'GPU_{saved_model_name}_{batch_size}'])
         results.loc['batch_size']              = [batch_size]
         results.loc['accuracy']                = [acc_gpu]
-        results.loc['prediction_time']         = [np.sum(iter_times)*1000]
-        results.loc['images_per_sec_mean']     = [np.mean(batch_size / iter_times)]
-        results.loc['first_iteration_time']   = [first_iter_time * 1000]
-        results.loc['average_iteration_time'] = [np.mean(iter_times[1:]) * 1000]
-        results.loc['load_time']               = [load_time*1000]
-        results.loc['wall_time']               = [(time.time() - walltime_start)*1000]
+        results.loc['total_inference_time']     = [np.sum(iter_times)*1000]
+        results.loc['first_inference_time']     = [first_iter_time * 1000]
+        results.loc['next_inference_time_mean'] = [np.median(iter_times[1:]) * 1000]
+        results.loc['next_inference_time_mean'] = [np.mean(iter_times[1:]) * 1000]
+        results.loc['images_per_sec_mean']      = [np.mean(batch_size / iter_times)]
+        results.loc['model_load_time']          = [load_time*1000]
+        results.loc['wall_time']                = [(time.time() - walltime_start)*1000]
 
         return results, iter_times
 
