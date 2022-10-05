@@ -101,11 +101,12 @@ def inference(saved_model_name, batch_size):
             tf.profiler.experimental.start('logdir')
             yhat_np = model.predict(batch)
             tf.profiler.experimental.stop()
+            inference_time = time.time()-start_time
 
             if counter ==0:
-                first_iter_time = time.time() - start_time
+                first_iter_time = inference_time
             else:
-                iter_times.append(time.time() - start_time)
+                iter_times.append(inference_time)
             actual_labels.extend(label for label_list in batch_labels for label in label_list)
             pred_labels.extend(list(np.argmax(yhat_np, axis=1)))
 
@@ -114,9 +115,7 @@ def inference(saved_model_name, batch_size):
                 display_threshold+=display_every
 
             counter+=1
-            
-            if counter == 100:
-                break
+
 
         iter_times = np.array(iter_times)
         acc_gpu = np.sum(np.array(actual_labels) == np.array(pred_labels))/len(actual_labels)
