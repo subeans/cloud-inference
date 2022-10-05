@@ -127,7 +127,7 @@ def inference(saved_model_name, batch_size):
     results.loc['accuracy']                 = [acc_cpu]
     results.loc['total_inference_time']     = [np.sum(iter_times)*1000]
     results.loc['first_inference_time']     = [first_iter_time * 1000]
-    results.loc['next_inference_time_mean'] = [np.median(iter_times[1:]) * 1000]
+    results.loc['next_inference_time_median'] = [np.median(iter_times[1:]) * 1000]
     results.loc['next_inference_time_mean'] = [np.mean(iter_times[1:]) * 1000]
     results.loc['images_per_sec_mean']      = [np.mean(batch_size / iter_times)]
     results.loc['model_load_time']          = [load_time*1000]
